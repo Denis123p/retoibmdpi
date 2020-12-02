@@ -1,0 +1,43 @@
+pipeline {
+    agent { 
+        node { 
+            label 'jenkins_slave'
+        }
+    }
+    environment {
+        AZ_DOCKER_KEY_ID     = 'jenkins-user-for-docker-repository'
+        REPOSITORY           = 'dpi90/retotecnico'
+        REPOSITORY_BD        = 'dpi90/retotecnico_bd'
+        AZ_K8S_KEY_ID        = 'jenkins-user-for-k8s-azure'
+    }
+    stages {
+        stage('Git Clone'){
+            steps {
+                git credentialsId: 'jenkins-user-for-git-repository', url: 'https://github.com/Denis123p/retoibmdpi.git'
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                script{
+                    //customImage = docker.build(REPOSITORY_BD+":${env.BUILD_ID}/")
+                    sh 'docker build -t dpi90/retotecnicobd:latest ./mysql/'
+                }
+            }
+        }
+        stage('Push Docker') {
+            steps {
+                script {
+                    docker.withRegistry('',AZ_DOCKER_KEY_ID) {
+                        
+                        sh "docker push dpi90/retotecnicobd:latest"
+                    }
+                }
+            }
+        }
+    }
+    post { 
+        always { 
+            cleanWs()
+        }
+    }
+}
